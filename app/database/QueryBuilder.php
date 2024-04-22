@@ -28,7 +28,7 @@ class QueryBuilder {
     /**
      * Select statement.
      */
-    private array $select = [];
+    public array $select = [];
 
     /**
      * The database table to select from.
@@ -38,7 +38,7 @@ class QueryBuilder {
     /**
      * where statements.
      */
-    private array $wheres = []; 
+    public array $wheres = []; 
 
     /**
      * Group by statements.
@@ -49,11 +49,6 @@ class QueryBuilder {
      * Having statements.
      */
     private array $havings = [];
-
-    /**
-     * Last having statements in $havings array.
-     */
-    private ?int $havingCount = null;
 
     /**
      * Order by parameters.
@@ -69,6 +64,16 @@ class QueryBuilder {
      * Offset parameter.
      */
     private ?int $offset = null;
+
+    /**
+     * Count the conditions added.
+     */
+    private int $conditionCount = 0;
+
+    /**
+     * Last having statements in $havings array.
+     */
+    private ?int $havingCount = null;
 
     /**
      * Key value pairs of the user inputs to build the query.
@@ -133,7 +138,8 @@ class QueryBuilder {
      */
     public function table(string $table): QueryBuilder {
         if ( !is_string($table) ) throw new \Exception('The parameter $table must be a string!');
-        if ( !in_array( $table, $this->tables ) ) throw new \Exception('The table does not exist in the database!');
+
+        if ( 'yes' === strtolower($_ENV['DB_CHECK_TABLES']) && !in_array( $table, $this->tables ) ) throw new \Exception('The table does not exist in the database!');
 
         $this->from = $table;
 
@@ -167,12 +173,12 @@ class QueryBuilder {
         // Build functions.
         if ( $functions ) {
             foreach ($functions as $col => $func) {
-                if ( !in_array($col, $this->select) ) {
-                    throw new \Exception('The column' . $col . ' is not present between SELECT columns!');
+                if ( !array_key_exists($col, $this->select) && !in_array($col, $this->select) ) {
+                    throw new \Exception('The column ' . $col . ' is not present between SELECT columns!');
                 }
 
                 if ( !in_array($func, $this->functions) ) {
-                    throw new \Exception('The function' . $func . ' is not valid!');
+                    throw new \Exception('The function ' . $func . ' is not valid!');
                 }
 
                 $this->select['__FUNCTIONS__'] = [ $col => $func ];
@@ -526,11 +532,9 @@ class QueryBuilder {
      * Get the built query.
      */
     public function getQuery(): string|array {
-        //return [$this->havings, $this->havingCount];
         $this->buildQuery();
-        return $this->query;
 
-        return $this->select;
+        return $this->query;
     }
 
     /**
@@ -544,6 +548,8 @@ class QueryBuilder {
      * Get query and params.
      */
     public function getQueryAndParams(): array {
+        $this->buildQuery();
+
         return [
             $this->query,
             $this->params
@@ -572,16 +578,22 @@ class QueryBuilder {
             $conditions = $column;
         }
 
+        $this->{$conditionProp}[$this->conditionCount] = [
+            'type'          => $type->value,
+            'conditions'    => []
+        ];
+
         foreach ($conditions as $condition) {
-            $this->{$conditionProp}[] = [
+            $this->{$conditionProp}[$this->conditionCount]['conditions'][] = [
                 'operator'      => $operator ? $operator : '',
                 'column'        => $condition[0],
                 'compare'       => in_array($condition[1], $this->compOperators) ? $condition[1] : '=',
                 'value'         => !array_key_exists(2, $condition) ? $condition[1] : $condition[2],
-                'bool'          => $bool,
-                'type'          => $type->value,
+                'bool'          => $bool
             ];
         }
+
+        $this->conditionCount++;
 
         // For "HAVINGS" add 1 to the counter.
         if ('havings' === $conditionProp) $this->havingCount++;
@@ -650,21 +662,33 @@ class QueryBuilder {
 
         $c = 1;
         $wrap = false;
+        $selector = 'col';
         foreach ($functionalArray as $as => $col) {
             // There is a function? If so wrap!
-            $wrap = $functions && array_key_exists($col, $functions) ? true : false;
+            if ($functions) {
+                if (isset($functions[$col])) {
+                    $wrap = true;
+                    $selector = 'col';
+                }
 
-            // Ad column...
-            $select .= $wrap ? $functions[$col].'(' : '';   // Pre function.
-            $select .= $col;                                // Column.
+                if (isset($functions[$as])) {
+                    $wrap = true;
+                    $selector = 'as';
+                }
+            }
+
+            // Add column...
+            $select .= $wrap ? $functions[$$selector].'(' : '';   // Pre function.
+            $select .= is_string($as) ? $as : $col;         // Column.
             $select .= $wrap ? ')' : '';                    // After function.
 
             // As?
-            $select .= is_string($as) ? ' AS ' . $as : '';
+            $select .= is_string($as) ? ' AS ' . $col : '';
 
             // Add comma.
             $select .= $c !== count($functionalArray) ? ', ' : '';
 
+            $wrap = false;
             $c++;
         }
 
@@ -676,56 +700,66 @@ class QueryBuilder {
      */
     private function buildConditions(string $conditionProp, string $type): string {
         $stmt = $type . ' ';
-        $c = (int) 1;
+        $previous = null;
 
-        // Build condition.
-        foreach ($this->{$conditionProp} as $condition) {
-            $stmt .= $c !== 1 ? $condition['bool'] . ' ' : ''; // Build the BOOL (AND/OR).
-            $not = $condition['operator'] ? $condition['operator'] . ' ' : ''; // Build the operator (NOT)
+        foreach ($this->{$conditionProp} as $blockCount => $block) {
+            $type = $block['type'];
+            $conditions = $block['conditions'];
+            $previous = $type;
+            $isOR = false;
 
-            // In "HAVING" we can use SQL functions, but check if we have functions.
-            $functions = 'HAVING' === $type && array_key_exists('__FUNCTIONS__', $condition) ? $condition['__FUNCTIONS__'] : false;
+            // Loop each condition.
+            foreach ($conditions as $count => $condition) {
+                $isOR = str_contains($type, 'OR_') ? true : false;
 
-            switch ($condition['type']) {
-                case 'AND_WHERE':
-                case 'OR_WHERE':
-                case 'AND_WHERE_NOT':
-                case 'OR_WHERE_NOT':
-                    $stmt .= $not . $condition['column'] . ' ' . $condition['compare'] . ' ' . $condition['value'] . ' ';
+                $bool = $isOR && $count > 0 ? 'AND' : $condition['bool']; // Build the first bool.
 
-                    break;
-                case 'AND_WHERE_BETWEEN':
-                case 'AND_WHERE_NOT_BETWEEN':
-                case 'OR_WHERE_BETWEEN':
-                case 'OR_WHERE_NOT_BETWEEN':
-                    $range = explode('|', $condition['value']);
+                $stmt .= $blockCount > 0 || $count > 0 ? $bool . ' ' : ($isOR ? 'OR ' : ''); // Build the BOOL (AND/OR).
+                
+                $not = $condition['operator'] ? $condition['operator'] . ' ' : ''; // Build the operator (NOT)
+    
+                // In "HAVING" we can use SQL functions, but check if we have functions.
+                $functions = 'HAVING' === $type && array_key_exists('__FUNCTIONS__', $condition) ? $condition['__FUNCTIONS__'] : false;
 
-                    $stmt .= $condition['column'] . ' ' . $not . 'BETWEEN ' . $range[0] . ' AND ' . $range[1] . ' ';
-
-                    break;
-                case 'AND_WHERE_IN':
-                case 'AND_WHERE_NOT_IN':
-                case 'OR_WHERE_IN':
-                case 'OR_WHERE_NOT_IN':
-                    $stmt .= $condition['column'] . ' ' . $not . 'IN ' . $condition['value'] . ' ';
-
-                    break;
-                case 'AND_HAVING':
-                case 'OR_HAVING':
-                case 'AND_NOT_HAVING':
-                case 'OR_NOT_HAVING':
-                    $func = $functions && array_key_exists($condition['column'], $functions) ? $functions[$condition['column']] : '';
-
-                    $stmt .= $not;
-
-                    $stmt .= $func ? $func.'(' : '';
-                    $stmt .= $condition['column'];
-                    $stmt .= $func ? ')' : '';
-
-                    $stmt .= ' ' . $condition['compare'] . ' ' . $condition['value'] . ' ';
+                switch ($type) {
+                    case 'AND_WHERE':
+                    case 'OR_WHERE':
+                    case 'AND_WHERE_NOT':
+                    case 'OR_WHERE_NOT':
+                        $stmt .= $not . $condition['column'] . ' ' . $condition['compare'] . ' ' . $condition['value'] . ' ';
+    
+                        break;
+                    case 'AND_WHERE_BETWEEN':
+                    case 'AND_WHERE_NOT_BETWEEN':
+                    case 'OR_WHERE_BETWEEN':
+                    case 'OR_WHERE_NOT_BETWEEN':
+                        $range = explode('|', $condition['value']);
+    
+                        $stmt .= $condition['column'] . ' ' . $not . 'BETWEEN ' . $range[0] . ' AND ' . $range[1] . ' ';
+    
+                        break;
+                    case 'AND_WHERE_IN':
+                    case 'AND_WHERE_NOT_IN':
+                    case 'OR_WHERE_IN':
+                    case 'OR_WHERE_NOT_IN':
+                        $stmt .= $condition['column'] . ' ' . $not . 'IN ' . $condition['value'] . ' ';
+    
+                        break;
+                    case 'AND_HAVING':
+                    case 'OR_HAVING':
+                    case 'AND_NOT_HAVING':
+                    case 'OR_NOT_HAVING':
+                        $func = $functions && array_key_exists($condition['column'], $functions) ? $functions[$condition['column']] : '';
+    
+                        $stmt .= $not;
+    
+                        $stmt .= $func ? $func.'(' : '';
+                        $stmt .= $condition['column'];
+                        $stmt .= $func ? ')' : '';
+    
+                        $stmt .= ' ' . $condition['compare'] . ' ' . $condition['value'] . ' ';
+                }
             }
-
-            $c++;
         }
 
         return $stmt;

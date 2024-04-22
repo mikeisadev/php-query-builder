@@ -6,13 +6,32 @@ use Dotenv\Dotenv;
 
 final class Init {
 
-    public string $baseurl = '';
+    /**
+     * Class Instance.
+     */
+    private static ?Init $instance = null;
+
+    /**
+     * Project base DIRectory path.
+     */
+    public string $basedir = '';
+
+    /**
+     * Instance this class.
+     */
+    public static function getInstance() {
+        if ( is_null( self::$instance ) ) {
+            self::$instance = new self();
+        }
+
+        return self::$instance;
+    }
 
     /**
      * Constructor.
      */
-    public function __construct() {
-        $this->set_baseurl();
+    private function __construct() {
+        $this->set_basedir();
         $this->require_autoload();
         $this->set_env();
         $this->require_includes();
@@ -21,14 +40,14 @@ final class Init {
     /**
      * Set base url.
      */
-    private function set_baseurl() {
+    private function set_basedir() {
         $path = __DIR__;
         $pathArr = explode('\\', $path);
 
         if ( 'app' === end( $pathArr ) ) {
-            $this->baseurl = dirname( $path ) . '\\';
+            $this->basedir = dirname( $path ) . '\\';
         } else {
-            $this->baseurl = $path . '\\';
+            $this->basedir = $path . '\\';
         }
     }
 
@@ -36,25 +55,23 @@ final class Init {
      * Require the autoload.
      */
     private function require_autoload() {
-        require_once $this->baseurl . 'vendor/autoload.php';
+        require_once $this->basedir . 'vendor/autoload.php';
     }
 
     /**
      * Set environmental variables.
      */
     private function set_env() {
-        Dotenv::createImmutable( $this->baseurl )->load();
+        Dotenv::createImmutable( $this->basedir )->load();
     }
 
     /**
      * Require includes.
      */
-    private function require_includes() {
-        require_once $this->baseurl . 'app/utils/Rand.php';
-                
-        require_once $this->baseurl . 'app/database/enums/DBEnum.php';
-        require_once $this->baseurl . 'app/database/QueryBuilder.php';
-        require_once $this->baseurl . 'app/database/DB.php';
+    private function require_includes() {                
+        require_once $this->basedir . 'app/database/enums/DBEnum.php';
+        require_once $this->basedir . 'app/database/QueryBuilder.php';
+        require_once $this->basedir . 'app/database/DB.php';
     }
 
 }

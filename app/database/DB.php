@@ -6,11 +6,6 @@ use App\DB\QueryBuilder;
 class DB {
 
     /**
-     * Main instance of this class.
-     */
-    private static ?QueryBuilder $instance = null;
-
-    /**
      * Database credentials.
      */
     private static ?string $dbtype = null;
@@ -43,26 +38,24 @@ class DB {
      * Get the same instance of this class.
      */
     private static function getInstance() {
-        if ( is_null(self::$instance) ) {
-            // Set credentials.
-            self::$dbtype = $_ENV['DB_TYPE'];
-            self::$dbhost = $_ENV['DB_HOST'];
-            self::$dbport = $_ENV['DB_PORT'];
-            self::$dbname = $_ENV['DB_NAME'];
-            self::$dbuser = $_ENV['DB_USER'];
-            self::$dbpass = $_ENV['DB_PASS'];
+        // Set credentials.
+        self::$dbtype = $_ENV['DB_TYPE'];
+        self::$dbhost = $_ENV['DB_HOST'];
+        self::$dbport = $_ENV['DB_PORT'];
+        self::$dbname = $_ENV['DB_NAME'];
+        self::$dbuser = $_ENV['DB_USER'];
+        self::$dbpass = $_ENV['DB_PASS'];
 
-            // Connect to database.
-            self::connect();
+        // Connect to database.
+        self::connect();
 
-            // Load database tables as additional validation layer.
+        // Load database tables as additional validation layer.
+        if ( 'yes' === strtolower($_ENV['DB_CHECK_TABLES']) ) {
             self::loadTables();
-
-            // Set a new instance of QueryBuilder setting database connection.
-            self::$instance = new QueryBuilder( self::$connection, self::$tables );
         }
 
-        return self::$instance;
+        // Return the query builder.
+        return new QueryBuilder( self::$connection, self::$tables );
     }
 
     /**

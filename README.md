@@ -33,15 +33,9 @@ The query builder use prepared statements and value binding to prevent SQL injec
 
 The queries that actually you cannot do will be available soon.
 
-## Before to start
-
-Before to start install required composer packages running:
-
-```
-composer install
-```
-
 ## Setup
+
+### Before to start the setup
 
 Before to start with the project setup, I want to talk to you about the folder structure of the project.
 
@@ -59,6 +53,22 @@ When calling a static method from "**DB**" (for example `DB::table()`) you'll th
 
 The `Init.php` (inside `./app` folder) file is used to require all classes and `autoload.php` from `./vendor` folder to get all the dependencies.
 
-Inside `index.php` I required the **Init.php** class using its namespace.
+Inside the `Init.php` file I load an important package to load database credentials from `.env` file called *vlucas/dotenv* requiring the `autoload.php` file.
 
-Now I can start using the **QueryBuilder**, so we'll go on with some examples:
+Inside `index.php` I required the **Init.php** class using its namespace to load everything.
+
+### Setup the query builder
+
+First, install the required packages:
+
+```
+composer install
+```
+
+The second step is to setup the `.env` file. This project already comes with an **.env.example** file, you must rename this file into **.env**.
+
+There you'll insert all the credentials to connect to your database.
+
+Inside the **index.php** I required the **Init.php** file (inside the `./app` folder) to load everything.
+
+So, all the examples are there
