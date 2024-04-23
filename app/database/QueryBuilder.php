@@ -414,13 +414,19 @@ class QueryBuilder {
      * Add functions like COUNT, MAX, MIN, AVG to the last HAVING statement.
      */
     public function addHavingFunction(array $functions): QueryBuilder {
-        $having = $this->havings[$this->havingCount-1];
+        $havings = $this->havings[$this->havingCount-1]['conditions'];
+        $funcCols = array_keys($functions);
+        $columns = (array) [];
+
+        foreach ($havings as $cond) {
+            $columns[] = $cond['column'];
+        }
 
         /**
          * Check if the column exists inside the last HAVING statement.
          */
-        foreach ($functions as $col => $func) {
-            if ( $col !== $having['column'] ) throw new \Exception('The column ' . $col . ' does not exist inside the HAVING statement.');
+        foreach ($funcCols as $col) {
+            if ( !in_array($col, $columns) ) throw new \Exception('The column ' . $col . ' does not exist inside the HAVING statement.');
         }
 
         /**
@@ -551,8 +557,8 @@ class QueryBuilder {
         $this->buildQuery();
 
         return [
-            $this->query,
-            $this->params
+            'query' => $this->query,
+            'params' => $this->params
         ];
     }
 
@@ -708,6 +714,11 @@ class QueryBuilder {
             $previous = $type;
             $isOR = false;
 
+            // In "HAVING" we can use SQL functions, but check if we have functions.
+            $functions = str_contains($type, 'HAVING') && array_key_exists('__FUNCTIONS__', $block) ? $block['__FUNCTIONS__'] : false;
+
+            print_r($functions);
+
             // Loop each condition.
             foreach ($conditions as $count => $condition) {
                 $isOR = str_contains($type, 'OR_') ? true : false;
@@ -717,9 +728,6 @@ class QueryBuilder {
                 $stmt .= $blockCount > 0 || $count > 0 ? $bool . ' ' : ($isOR ? 'OR ' : ''); // Build the BOOL (AND/OR).
                 
                 $not = $condition['operator'] ? $condition['operator'] . ' ' : ''; // Build the operator (NOT)
-    
-                // In "HAVING" we can use SQL functions, but check if we have functions.
-                $functions = 'HAVING' === $type && array_key_exists('__FUNCTIONS__', $condition) ? $condition['__FUNCTIONS__'] : false;
 
                 switch ($type) {
                     case 'AND_WHERE':

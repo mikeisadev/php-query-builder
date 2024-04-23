@@ -14,30 +14,26 @@ Init::getInstance();    // Init project.
  * Column selection can be done via an array or via a single string for one column.
  */
 
-echo DB::table('table_name')
-    ->select()
-    ->getQuery();
+DB::table('table_name')
+    ->select();
 // QUERY: SELECT * FROM table_name
 
 echo '<br/>';
 
-echo DB::table('table_name')
-    ->select('*')
-    ->getQuery();
+DB::table('table_name')
+    ->select('*');
 // QUERY: SELECT * FROM table_name
 
 echo '<br/>';
 
-echo DB::table('table_name')
-    ->select(['column_1', 'column_2'])
-    ->getQuery();
+DB::table('table_name')
+    ->select(['column_1', 'column_2']);
 // QUERY: SELECT column_1, column_2 FROM table_name
 
 echo '<br/>';
 
-echo DB::table('table_name')
-    ->select('only_one_column')
-    ->getQuery();
+DB::table('table_name')
+    ->select('only_one_column');
 // QUERY: SELECT only_one_column FROM table_name
 
 echo '<br/>';
@@ -49,9 +45,8 @@ echo '<br/>';
  * a column an use an SQL aggregate function.
  */
 
-echo DB::table('table_name')
-    ->select(['column_1'], ['column_1' => 'COUNT'])
-    ->getQuery();
+DB::table('table_name')
+    ->select(['column_1'], ['column_1' => 'COUNT']);
 // QUERY: SELECT COUNT(column_1) FROM table_name
 
 echo '<br/>';
@@ -73,24 +68,24 @@ echo '<br/>';
 /**
  * Add conditions.
  */
-echo DB::table('table_name')
+DB::table('table_name')
     ->select(['column_1', 'column_2'])
-    ->where('column_1', 'text') // Default comparator is "="
-    ->getQuery();
+    ->where('column_1', 'text'); // Default comparator is "="
+// QUERY: SELECT column_1, column_2 FROM table_name WHERE column_1 = text
 
 echo '<br/>';
 
-echo DB::table('table_name')
+DB::table('table_name')
     ->select(['column_1', 'column_2'])
-    ->where('column_1', 'LIKE', 'string') // Default comparator is "="
-    ->getQuery();
+    ->where('column_1', 'LIKE', 'string'); // The term between column and value is the comparator
+// QUERY: SELECT column_1, column_2 FROM table_name WHERE column_1 LIKE text
 
 echo '<br/>';
 
-echo DB::table('table_name')
+DB::table('table_name')
     ->select(['column_1', 'column_2'])
-    ->where('column_1', '>', 10) // Default comparator is "="
-    ->getQuery();
+    ->where('column_1', '>', 10);
+// QUERY: SELECT column_1, column_2 FROM table_name WHERE column_1 > 10
 
 echo '<br/>';
 
@@ -99,29 +94,29 @@ echo '<br/>';
  * 
  * You use a bidimensional array to put multiple AND conditions.
  */
-echo DB::table('table_name')
+DB::table('table_name')
     ->select(['column_1', 'column_2'])
     ->where([
         ['column_1', '>', 10],
         ['column_2', '<', 50],
-    ])
-    ->getQuery();
+    ]);
+// QUERY: SELECT column_1, column_2 FROM table_name WHERE column_1 > 10 AND column_2 < 50
 
 echo '<br/>';
 
 // This is the same thing as above but repeating the where method.
-echo DB::table('table_name')
+DB::table('table_name')
     ->select(['column_1', 'column_2'])
     ->where('column_1', '>', 10)
-    ->where('column_2', '<', 50)
-    ->getQuery();
+    ->where('column_2', '<', 50);
+// QUERY: SELECT column_1, column_2 FROM table_name WHERE column_1 > 10 AND column_2 < 50
 
 echo '<br/>';
 
 /**
  * OR where condition.
  */
-$q = DB::table('table_name')
+DB::table('table_name')
     ->select(['column_1', 'column_2'])
     ->where([
         ['column_1', '>', 10],
@@ -131,61 +126,190 @@ $q = DB::table('table_name')
         ['column_1', '>', 100],
         ['column_2', '<', 200]
     ]);
+// QUERY: SELECT column_1, column_2 FROM table_name WHERE column_1 > 10 AND column_2 < 50 OR column_1 > 100 AND column_2 < 200
 
-echo $q->getQuery();
+echo '<br/>';
 
-echo "<pre>";
-print_r($q->wheres);
-echo "</pre>";
+/**
+ * WHERE NOT
+ */
+DB::table('table_name')
+    ->select(['column_1', 'column_2'])
+    ->whereNot('column_1', '>', 10);
+// QUERY: SELECT column_1, column_2 FROM table_name WHERE NOT column_1 > 10
 
-echo "<pre>";
+echo '<br/>';
 
-// TESTING
-// print_r(DB::table('wp_posts')
-//     ->select(['id', 'post_title'], ['id' => 'COUNT'])
-//     ->where([['id', '=', 5]])
-//     ->whereNotBetween('id', 1, 5)
-//     ->orWhereBetween('id', 5, 10)
-//     ->whereNotIn('id', [1, 2, 3, 4, 5])
-//     ->groupBy('id')
-//     ->having('id', '=', '1')
-//     ->addHavingFunction(['id' => 'COUNT'])
-//     ->having('post_title', '!=', 'mais')
-//     ->addHavingFunction(['post_title' => 'AVG'])
-//     ->get());
-// echo "</pre>";
+/**
+ * ORDER BY.
+ */
+DB::table('table_name')
+    ->select(['column_1', 'column_2'])
+    ->orderBy('column_1', 'ASC');
+// QUERY: SELECT column_1, column_2 FROM table_name ORDER BY column_1 ASC
 
-// COMPLEX QUERY
-// print_r( DB::table('wp_postmeta')
-// ->select(['post_id', 'meta_id_count' => 'meta_id'], ['meta_id' => 'COUNT'])
-// ->groupBy('post_id')
-// ->having('meta_id', '>', '4')
-// ->addHavingFunction(['meta_id' => 'COUNT'])->get() );
+echo '<br/>';
 
-// SAVE IN VARIABLE AND USE LATER.
-$wp_postmeta = DB::table('wp_postmeta')
-->select(['post_id', 'meta_id' => 'meta_id_count'], ['meta_id_count' => 'COUNT'])
-->groupBy('post_id')
-->having([['meta_id', '>', '4'], ['post_id', '>', '17']])
-->addHavingFunction(['meta_id' => 'COUNT'])
-->orderBy(['post_id', 'meta_id_count'], 'ASC')
-->limit(25)
-->offset(2);
+/**
+ * LIMIT.
+ */
+DB::table('table_name')
+    ->select(['column_1', 'column_2'])
+    ->limit(25);
+// QUERY: SELECT column_1, column_2 FROM table_name LIMIT 25
 
+echo '<br/>';
 
-print_r( $wp_postmeta->get() );
-// print_r( $wp_postmeta->count() );
+/**
+ * LIMIT with starting offset.
+ */
+DB::table('table_name')
+    ->select(['column_1', 'column_2'])
+    ->limit(5, 25); // Start from fifth result up to 25 position.
+// QUERY: SELECT column_1, column_2 FROM table_name LIMIT 5, 25
 
-// $wp_posts = QueryBuilder::table('wp_postmeta')
-//     ->select(['meta_id', 'post_id'], ['meta_id' => 'COUNT'], ['meta_id' => 'meta_dio', 'post_id' => 'h'])
-//     ->groupBy(['post_id'])
-//     ->having([['meta_dio', '>', 50], ['meta_dio', '<', 60]])
+echo '<br/>';
+
+/**
+ * OFFSET.
+ */
+DB::table('table_name')
+    ->select(['column_1', 'column_2'])
+    ->offset(5); // Start from fifth result.
+// QUERY: SELECT column_1, column_2 FROM table_name OFFSET 5
+
+echo '<br/>';
+
+/**
+ * GROUP BY
+ */
+DB::table('table_name')
+    ->select('column_1')
+    ->groupBy('column_1');
+// QUERY: SELECT column_1 FROM table_name GROUP BY column_1
+
+echo '<br/>';
+
+/**
+ * HAVING
+ */
+DB::table('table_name')
+    ->select('column_1')
+    ->groupBy('column_1')
+    ->having('column_1', '>', 50);
+// QUERY: SELECT column_1 FROM table_name GROUP BY column_1 HAVING column_1 > 50
+
+echo '<br/>';
+
+/**
+ * Get all results
+ * 
+ * Use ->get() at the end.
+ */
+// DB::table('table_name')
+//     ->select('column_1')
+//     ->groupBy('column_1')
+//     ->having('column_1', '>', 50)
 //     ->get();
 
-// $wp_posts = QueryBuilder::table('wp_postmeta')
-//     ->select(['post_id'], [], ['meta_id' => 'meta_dio'], true)
+echo '<br/>';
+
+/**
+ * Get first result only.
+ */
+// DB::table('table_name')
+//     ->select('column_1')
+//     ->groupBy('column_1')
+//     ->having('column_1', '>', 50)
+//     ->first();
+
+echo '<br/>';
+
+/**
+ * Count the results.
+ */
+// DB::table('table_name')
+//     ->select('column_1')
+//     ->groupBy('column_1')
+//     ->having('column_1', '>', 50)
+//     ->count();
+
+echo '<br/>';
+
+/**
+ * Debugging.
+ * 
+ * For debugging you can use getQuery() method at the end
+ * to get the built query.
+ */
+echo DB::table('table_name')
+    ->select('column_1')
+    ->groupBy('column_1')
+    ->having('column_1', '>', 50)
+    ->getQuery();
+
+echo '<br/>';
+
+/**
+ * Get params.
+ */
+$col1 = 400;
+print_r( DB::table('table_name')
+    ->select('column_1')
+    ->where('column_1', '>', ':col')
+    ->setParams([
+        ':col' => $col1
+    ])
+    ->getParams() );
+
+echo '<br/>';
+
+/**
+ * Get query and params
+ */
+$col1 = 400;
+print_r( DB::table('table_name')
+    ->select('column_1')
+    ->where('column_1', '>', ':col')
+    ->setParams([
+        ':col' => $col1
+    ])
+    ->getQueryAndParams() );
+
+echo '<br/>';
+
+/**
+ * To prevent SQL injection use setParams.
+ * 
+ * In your clause where you accept external user input use :unique_string.
+ * 
+ * In the example below I set ':col' in the where clause to get an external user input to manipulate the query.
+ */
+// $col1 = 400;
+// DB::table('table_name')
+//     ->select('column_1')
+//     ->where('column_1', '>', ':col')
+//     ->setParams([
+//         ':col' => $col1
+//     ]);
+
+// echo '<br/>';
+
+// SQL Injection is blocked.
+// $col2 = 400 . 'OR 1=1';
+// DB::table('table_name')
+//     ->select('column_1')
+//     ->where('column_1', '>', ':col')
+//     ->setParams([
+//         ':col' => $col2
+//     ])
 //     ->get();
 
-// echo "<pre>";
-// print_r($wp_posts);
-// echo "</pre>";
+// echo '<br/>';
+
+// This is vulnerable to SQL injection (not using setParams function).
+// $col3 = 400 . 'OR 1=1';
+// DB::table('table_name')
+//     ->select('column_1')
+//     ->where('column_1', '>', $col3)
+//     ->get();
