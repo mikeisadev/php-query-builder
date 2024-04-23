@@ -370,3 +370,7 @@ print_r( DB::table('table_name')
     ])
     ->getQueryAndParams() );
 ```
+
+**NOTE**: I will insert more examples as I'll expand the project. But there are other cases to be covered that I'll add in the future.
+
+**DISCLAIMER**: This is not a production ready software. It is not 100% safe. This project will need adjustments and further reviews for sure.
