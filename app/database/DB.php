@@ -32,72 +32,69 @@ class DB {
     /**
      * Database tables whitelist.
      */
-    private static array $tables = [];
+    private static ?array $tables = null;
 
     /**
      * Get the same instance of this class.
      */
-    private static function getInstance() {
+    private static function getInstance(): QueryBuilder {
         // Set credentials.
-        self::$dbtype = $_ENV['DB_TYPE'];
-        self::$dbhost = $_ENV['DB_HOST'];
-        self::$dbport = $_ENV['DB_PORT'];
-        self::$dbname = $_ENV['DB_NAME'];
-        self::$dbuser = $_ENV['DB_USER'];
-        self::$dbpass = $_ENV['DB_PASS'];
+        static::$dbtype = $_ENV['DB_TYPE'];
+        static::$dbhost = $_ENV['DB_HOST'];
+        static::$dbport = $_ENV['DB_PORT'];
+        static::$dbname = $_ENV['DB_NAME'];
+        static::$dbuser = $_ENV['DB_USER'];
+        static::$dbpass = $_ENV['DB_PASS'];
 
         // Connect to database.
-        self::connect();
+        if ( is_null(static::$connection) ) {
+            static::connect();
+        }
 
         // Load database tables as additional validation layer.
-        if ( 'yes' === strtolower($_ENV['DB_CHECK_TABLES']) ) {
-            self::loadTables();
+        if ( 'yes' === strtolower($_ENV['DB_CHECK_TABLES']) && is_null(static::$tables) ) {
+            static::loadTables();
         }
 
         // Return the query builder.
-        return new QueryBuilder( self::$connection, self::$tables );
+        return new QueryBuilder( static::$connection, static::$tables );
     }
 
     /**
      * Connect to database.
      */
-    private static function connect(): \PDO {
+    private static function connect(): void {
         try {
-            self::$connection = new \PDO(
-                self::$dbtype.':host='.self::$dbhost.':'.self::$dbport.';dbname='.self::$dbname, 
-                self::$dbuser, 
-                self::$dbpass, 
-                self::$options
+            static::$connection = new \PDO(
+                static::$dbtype.':host='.static::$dbhost.':'.static::$dbport.';dbname='.static::$dbname, 
+                static::$dbuser, 
+                static::$dbpass, 
+                static::$options
             ); 
         } catch (\PDOException $e) {
-            echo 'Connection error: ' . $e->getMessage();
+            throw new \Exception('Connection error: ' . $e->getMessage());
         }
-
-        return self::$connection;
     }
 
     /**
      * Get all the tables of current database.
      */
-    private static function loadTables() {
+    private static function loadTables(): void {
         $tables = (array) [];
-        $conn = self::$connection;
+        $conn = static::$connection;
 
         foreach ($conn->query('SHOW TABLES') as $row) {
-            $tables = [
-                ...$tables,
-                ...array_values($row)
-            ];
+            $tables = [...$tables, ...array_values($row)];
         }
 
-        self::$tables = $tables;
+        static::$tables = $tables;
     }
 
     /**
      * Call a static method from this class referred to QueryBuilder instance.
      */
     public static function __callStatic($method, $arguments): QueryBuilder {
-        $instance = self::getInstance();
+        $instance = static::getInstance();
 
         /**
          * Statically call one of the methods inside the query builder class.

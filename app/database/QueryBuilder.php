@@ -28,7 +28,7 @@ class QueryBuilder {
     /**
      * Select statement.
      */
-    public array $select = [];
+    private array $select = [];
 
     /**
      * The database table to select from.
@@ -38,7 +38,7 @@ class QueryBuilder {
     /**
      * where statements.
      */
-    public array $wheres = []; 
+    private array $wheres = []; 
 
     /**
      * Group by statements.
@@ -125,7 +125,7 @@ class QueryBuilder {
      * Set database connection via PDO.
      * Set a whitelist of database tables.
      */
-    public function __construct(\PDO $connection, array $tables) {
+    public function __construct(\PDO $connection, ?array $tables) {
         // Set db connection.
         $this->connection = $connection;
 

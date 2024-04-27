@@ -24,10 +24,11 @@ DB::table('table_name')
     ->select('*');
 // QUERY: SELECT * FROM table_name
 
+
 echo '<br/>';
 
 DB::table('table_name')
-    ->select(['column_1', 'column_2']);
+->select(['column_1', 'column_2']);
 // QUERY: SELECT column_1, column_2 FROM table_name
 
 echo '<br/>';
